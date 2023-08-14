@@ -35,12 +35,12 @@ app.use(
 app.use(
   session({
     secret: SECRET,
-    cookie: { maxAge: 60 * 60 * 1000, httpOnly: true, signed: true },
+    cookie: { maxAge: 60 * 1000, httpOnly: true, signed: true },
     saveUninitialized: false,
     resave: false,
     store: MongoStore.create({
       mongoUrl: DATABASE_URL,
-      ttl: 60 * 60 * 1000,
+      ttl: 60 * 1000,
     }),
   })
 );
@@ -53,7 +53,7 @@ passportConfig(passport);
 app.post("/login", (req, res, next) => {
   passport.authenticate("local", (err, user, info) => {
     if (err) throw err;
-    if (!user) res.send(new ApiResponse(1, "Incorrect username/password", {}));
+    if (!user) res.send("Incorrect username/password");
     else {
       req.login(user, (err) => {
         if (err) throw err;
@@ -69,6 +69,14 @@ app.post("/login", (req, res, next) => {
       });
     }
   })(req, res, next);
+});
+
+app.post("/logout", function (req, res, next) {
+  req.logout(function (err) {
+    if (err) throw err;
+    req.session.destroy();
+    res.send("Successfully logged out!");
+  });
 });
 
 app.post("/register", (req, res) => {
@@ -94,9 +102,8 @@ app.post("/register", (req, res) => {
     });
 });
 
-app.get("/user", (req, res) => {
-  res.send(req.body);
-  console.log(req.body);
+app.get("/", (req, res) => {
+  res.send(req.user);
 });
 
 app.listen(PORT, () => {
