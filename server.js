@@ -4,23 +4,23 @@ const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
 const passport = require("passport");
-const passportLocal = require("passport-local").Strategy;
 const cookieParser = require("cookie-parser");
-const bcrypt = require("bcrypt");
 const session = require("express-session");
 const bodyParser = require("body-parser");
-const User = require("./models/user");
 const passportConfig = require("./passportConfig");
+const userRoutes = require("./routes/userRoutes");
 
+//Environmental Variables
 const DATABASE_URL = process.env.DATABASE_URL;
 const PORT = process.env.PORT;
 const SECRET = process.env.SECRET;
+
+//Express App Initialized
 const app = express();
+
+//Database Connection
 mongoose.connect(DATABASE_URL);
 const database = mongoose.connection;
-
-//Classes
-const ApiResponse = require("./classes/ApiResponse");
 
 //Middleware
 app.use(bodyParser.json());
@@ -50,61 +50,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 passportConfig(passport);
 
-app.post("/login", (req, res, next) => {
-  passport.authenticate("local", (err, user, info) => {
-    if (err) throw err;
-    if (!user) res.send("Incorrect username/password");
-    else {
-      req.login(user, (err) => {
-        if (err) throw err;
-        res.status(200);
-        res.statusMessage = "Successfully Authenticated";
-        res.send({
-          displayName: user.displayName,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          username: user.username,
-          role: user.role,
-        });
-      });
-    }
-  })(req, res, next);
-});
-
-app.post("/logout", function (req, res, next) {
-  req.logout(function (err) {
-    if (err) throw err;
-    req.session.destroy();
-    res.send("Successfully logged out!");
-  });
-});
-
-app.post("/register", (req, res) => {
-  User.findOne({ username: req.body.username })
-    .then(async (doc) => {
-      if (doc) res.send("User already exists");
-      if (!doc) {
-        const hashedPassword = await bcrypt.hash(req.body.password, 10);
-        const newUser = new User({
-          username: req.body.username,
-          password: hashedPassword,
-          firstName: req.body.firstName,
-          lastName: req.body.lastName,
-          displayName: req.body.displayName,
-          role: req.body.role,
-        });
-        await newUser.save();
-        res.send("User Created");
-      }
-    })
-    .catch((err) => {
-      throw err;
-    });
-});
-
-app.get("/", (req, res) => {
-  res.send(req.user);
-});
+app.use("/api", userRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server Started at ${PORT}`);
